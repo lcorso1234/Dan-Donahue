@@ -1,0 +1,83 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    color-scheme: dark;
+    background-color: #1f2428;
+  }
+
+  body {
+    @apply m-0 flex min-h-screen items-center justify-center bg-gunmetal px-6 py-10 text-text-light font-sans;
+    position: relative;
+    overflow: hidden;
+  }
+
+  body::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120' viewBox='0 0 120 120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='0.18'/%3E%3C/svg%3E");
+    opacity: 0.25;
+    pointer-events: none;
+    z-index: 0;
+  }
+}
+
+@layer components {
+  .card-panel {
+    background: linear-gradient(145deg, #2b3137, #1b1f22);
+    border-radius: 24px;
+    box-shadow:
+      0 25px 35px rgba(0, 0, 0, 0.55),
+      inset 0 0 0 1px rgba(255, 255, 255, 0.04);
+  }
+
+  .accent-pill {
+    display: none;
+  }
+
+  .save-button {
+    @apply relative flex w-full flex-col items-center gap-1 rounded-2xl border border-white/20 bg-gunmetal-light px-6 py-4 text-xs font-semibold uppercase tracking-[0.4em] text-text-light transition-shadow duration-200 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-neon;
+    animation: jiggle 3.5s ease-in-out infinite;
+    letter-spacing: 0.4em;
+    overflow: hidden;
+  }
+
+  .save-button::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    border-radius: inherit;
+    box-shadow: 0 0 20px rgba(123, 253, 1, 0.35);
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    z-index: -1;
+  }
+
+  .save-button:hover::after,
+  .save-button:focus-visible::after {
+    opacity: 1;
+  }
+}
+
+@keyframes jiggle {
+  0%,
+  70%,
+  100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  72% {
+    transform: translateY(-1px) rotate(-1deg);
+  }
+  76% {
+    transform: translateY(1px) rotate(1deg);
+  }
+  80% {
+    transform: translateY(-1px) rotate(-1deg);
+  }
+  84% {
+    transform: translateY(1px) rotate(1deg);
+  }
+}
