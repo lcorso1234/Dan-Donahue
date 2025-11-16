@@ -1,3 +1,5 @@
+import { SaveContactButton } from "../components/SaveContactButton";
+
 const headerLines = [
   { label: "First Name", value: "Dan" },
   { label: "Last Name", value: "Donahue" },
@@ -46,11 +48,7 @@ export default function Home() {
           ))}
         </section>
 
-        <button type="button" className="save-button">
-          <span className="text-base tracking-[0.55em] text-neon">
-            Save Contact
-          </span>
-        </button>
+        <SaveContactButton />
 
         <footer className="mt-6 space-y-1 text-center text-[0.75rem] text-text-muted">
           <p>
