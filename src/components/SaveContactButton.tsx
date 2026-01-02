@@ -1,5 +1,8 @@
 'use client';
 
+import React, { useState } from 'react';
+import ConfirmSendModal from './ConfirmSendModal';
+
 type SaveContactButtonProps = {
   className?: string;
 };
@@ -44,7 +47,12 @@ const triggerSms = () => {
 };
 
 export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
+  const [isSaving, setIsSaving] = useState(false);
+  const [modalOpen, setModalOpen] = useState(false);
+
   const handleSave = () => {
+    setIsSaving(true);
+
     const vcard = [
       'BEGIN:VCARD',
       'VERSION:3.0',
@@ -65,19 +73,47 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
     document.body.appendChild(link);
     link.click();
     link.remove();
-    URL.revokeObjectURL(url);
 
+    // Give the browser time to initiate the download before revoking the URL.
+    setTimeout(() => URL.revokeObjectURL(url), 1500);
+
+    // Open our custom confirmation modal after the save starts.
+    setModalOpen(true);
+    setIsSaving(false);
+  };
+
+  const handleConfirmSend = () => {
+    setModalOpen(false);
     triggerSms();
   };
 
+  const handleCancelSend = () => {
+    setModalOpen(false);
+  };
+
   return (
-    <button
-      type="button"
-      className={`save-button ${className}`}
-      onClick={handleSave}
-      aria-label="Save Dan Donahue's contact info"
-    >
-      <span className="text-base tracking-[0.55em] text-neon">Save Contact</span>
-    </button>
+    <>
+      <button
+        type="button"
+        className={`save-button ${className}`}
+        onClick={handleSave}
+        disabled={isSaving}
+        aria-label="Save Dan Donahue's contact info"
+        aria-busy={isSaving}
+      >
+        <span className="text-base tracking-[0.55em] text-neon">{isSaving ? 'Saving...' : 'Save Contact'}</span>
+      </button>
+
+      {/* Modal to confirm sending the automated SMS */}
+      <ConfirmSendModal
+        open={modalOpen}
+        title="Send automated message"
+        message={
+          "Contact saved to your device. Would you like to open Messages to send an automated intro to Dan Donahue?"
+        }
+        onConfirm={handleConfirmSend}
+        onCancel={handleCancelSend}
+      />
+    </>
   );
 }

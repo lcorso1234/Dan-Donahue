@@ -22,16 +22,16 @@
   },
   "homepage": "https://github.com/lcorso1234/Dan-Donahue#readme",
   "dependencies": {
-    "next": "^16.0.3",
-    "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "next": "^16.1.1",
+    "react": "^19.2.3",
+    "react-dom": "^19.2.3"
   },
   "devDependencies": {
     "@types/node": "^24.10.1",
     "@types/react": "^19.2.5",
     "autoprefixer": "^10.4.22",
     "eslint": "^9.39.1",
-    "eslint-config-next": "^16.0.3",
+    "eslint-config-next": "^16.1.1",
     "postcss": "^8.5.6",
     "tailwindcss": "^3.4.13",
     "typescript": "^5.9.3"
