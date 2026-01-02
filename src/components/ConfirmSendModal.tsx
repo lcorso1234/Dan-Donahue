@@ -29,16 +29,16 @@ export default function ConfirmSendModal({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="relative z-10 w-full max-w-md rounded-lg bg-white p-6 shadow-lg mx-4"
+        className="relative z-10 w-full max-w-md rounded-lg bg-gunmetal p-6 shadow-lg mx-4 text-white"
       >
-        <h3 className="mb-2 text-lg font-semibold">{title}</h3>
-        <p className="mb-4 text-sm">{message}</p>
+        <h3 className="mb-2 text-lg font-semibold text-neon">{title}</h3>
+        <p className="mb-4 text-sm text-white">{message}</p>
 
         <div className="flex justify-end gap-3">
           <button
             type="button"
             onClick={onCancel}
-            className="rounded-md border border-slate-300 px-3 py-1 text-sm"
+            className="rounded-md border border-gunmetal-light px-3 py-1 text-sm text-white hover:bg-gunmetal-light/60"
           >
             Cancel
           </button>
@@ -46,7 +46,7 @@ export default function ConfirmSendModal({
           <button
             type="button"
             onClick={onConfirm}
-            className="rounded-md bg-neon px-3 py-1 text-sm text-black"
+            className="rounded-md bg-neon px-3 py-1 text-sm text-gunmetal drop-shadow-neon hover:brightness-95"
           >
             Send
           </button>
