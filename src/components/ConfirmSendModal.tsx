@@ -1,9 +1,12 @@
 'use client';
 
+import React from 'react';
+
 type ConfirmSendModalProps = {
   open: boolean;
   title?: string;
   message: string;
+  children?: React.ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
 };
@@ -12,6 +15,7 @@ export default function ConfirmSendModal({
   open,
   title = 'Send Message',
   message,
+  children,
   onConfirm,
   onCancel,
 }: ConfirmSendModalProps) {
@@ -33,6 +37,8 @@ export default function ConfirmSendModal({
       >
         <h3 className="mb-2 text-lg font-semibold text-neon">{title}</h3>
         <p className="mb-4 text-sm text-white">{message}</p>
+
+        {children && <div className="mb-4">{children}</div>}
 
         <div className="flex justify-end gap-3">
           <button

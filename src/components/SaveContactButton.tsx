@@ -12,12 +12,12 @@ const DONAHUE_PHONE = '3129537098';
 const INTRO_TEXT =
   "Hi Mr. Donahue, I just saved your contact info from your site and I'm looking forward to connecting soon.";
 
-const buildSmsLink = () => {
+const buildSmsLink = (message = INTRO_TEXT) => {
   if (typeof navigator === 'undefined') {
     return null;
   }
 
-  const encodedMessage = encodeURIComponent(INTRO_TEXT);
+  const encodedMessage = encodeURIComponent(message);
   const smsScheme = `sms:${DONAHUE_PHONE}`;
   const userAgent = navigator.userAgent || '';
 
@@ -32,8 +32,8 @@ const buildSmsLink = () => {
   return `${smsScheme}?body=${encodedMessage}`;
 };
 
-const triggerSms = () => {
-  const smsLink = buildSmsLink();
+const triggerSms = (message?: string) => {
+  const smsLink = buildSmsLink(message);
   if (!smsLink) {
     return;
   }
@@ -49,6 +49,8 @@ const triggerSms = () => {
 export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
   const [isSaving, setIsSaving] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [senderName, setSenderName] = useState('');
+  const [senderEmail, setSenderEmail] = useState('');
 
   const handleSave = () => {
     setIsSaving(true);
@@ -83,8 +85,13 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
   };
 
   const handleConfirmSend = () => {
+    const finalMessage = `${INTRO_TEXT} My name is ${senderName || '[your name]'} and my email is ${senderEmail || '[your email]'}.`;
     setModalOpen(false);
-    triggerSms();
+    triggerSms(finalMessage);
+
+    // Clear inputs after sending
+    setSenderName('');
+    setSenderEmail('');
   };
 
   const handleCancelSend = () => {
@@ -109,11 +116,30 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
         open={modalOpen}
         title="Send automated message"
         message={
-          "Contact saved to your device. Would you like to open Messages to send an automated intro to Dan Donahue?"
+          "Contact saved to your device. Please add your name and email below so they can be included in the message to Dan Donahue."
         }
         onConfirm={handleConfirmSend}
         onCancel={handleCancelSend}
-      />
+      >
+        <div className="space-y-3">
+          <input
+            type="text"
+            value={senderName}
+            onChange={(e) => setSenderName(e.target.value)}
+            placeholder="Your full name"
+            className="w-full rounded-md px-2 py-1 text-black"
+            aria-label="Your name"
+          />
+          <input
+            type="email"
+            value={senderEmail}
+            onChange={(e) => setSenderEmail(e.target.value)}
+            placeholder="your@example.com"
+            className="w-full rounded-md px-2 py-1 text-black"
+            aria-label="Your email"
+          />
+        </div>
+      </ConfirmSendModal>
     </>
   );
 }
