@@ -67,6 +67,45 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
       'END:VCARD',
     ].join('\n');
 
+    // Prefer opening Android's Add Contact intent so it opens directly in the Contacts app.
+    const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
+    const isAndroid = /Android/i.test(userAgent);
+
+    if (isAndroid) {
+      try {
+        const name = encodeURIComponent('Dan Donahue');
+        const phone = encodeURIComponent('3129537098');
+        const email = encodeURIComponent('macdonahue@mac.com');
+
+        const intentUrl = `intent://contacts/insert?name=${name}&phone=${phone}&email=${email}#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.dir/contact;end`;
+
+        // Navigate to the intent URL. On Android this should open the Contacts app's Add Contact screen.
+        window.location.href = intentUrl;
+      } catch (e) {
+        // Ignore — we'll fallback to vCard download below
+      }
+
+      // Fallback: still provide a downloadable vCard in case the intent isn't supported.
+      const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = 'dan-donahue.vcf';
+      document.body.appendChild(link);
+      // Give the intent a short moment to fire before triggering a download.
+      setTimeout(() => {
+        link.click();
+        link.remove();
+        setTimeout(() => URL.revokeObjectURL(url), 1500);
+      }, 500);
+
+      // Open our custom confirmation modal after the save/intent attempt.
+      setModalOpen(true);
+      setIsSaving(false);
+      return;
+    }
+
+    // Non-Android: download the vCard file as before
     const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
