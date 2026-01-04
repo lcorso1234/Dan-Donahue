@@ -48,11 +48,16 @@ const triggerSms = (message?: string) => {
 
 export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
   const [isSaving, setIsSaving] = useState(false);
+  const [savePromptOpen, setSavePromptOpen] = useState(false);
+  const [installPromptOpen, setInstallPromptOpen] = useState(false);
+  const [downloadedVcardUrl, setDownloadedVcardUrl] = useState<string | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [senderName, setSenderName] = useState('');
   const [senderEmail, setSenderEmail] = useState('');
 
-  const handleSave = () => {
+  const performSave = () => {
+    // Close the save prompt immediately to avoid modal overlap
+    setSavePromptOpen(false);
     setIsSaving(true);
 
     const vcard = [
@@ -72,35 +77,24 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
     const isAndroid = /Android/i.test(userAgent);
 
     if (isAndroid) {
-      try {
-        const name = encodeURIComponent('Dan Donahue');
-        const phone = encodeURIComponent('3129537098');
-        const email = encodeURIComponent('macdonahue@mac.com');
-
-        const intentUrl = `intent://contacts/insert?name=${name}&phone=${phone}&email=${email}#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.dir/contact;end`;
-
-        // Navigate to the intent URL. On Android this should open the Contacts app's Add Contact screen.
-        window.location.href = intentUrl;
-      } catch (e) {
-        // Ignore — we'll fallback to vCard download below
-      }
-
-      // Fallback: still provide a downloadable vCard in case the intent isn't supported.
+      // Create the vCard blob and trigger a download so the user has the file locally.
       const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
       const url = URL.createObjectURL(blob);
       const link = document.createElement('a');
       link.href = url;
       link.download = 'dan-donahue.vcf';
       document.body.appendChild(link);
-      // Give the intent a short moment to fire before triggering a download.
       setTimeout(() => {
         link.click();
         link.remove();
-        setTimeout(() => URL.revokeObjectURL(url), 1500);
-      }, 500);
+      }, 100);
 
-      // Open our custom confirmation modal after the save/intent attempt.
-      setModalOpen(true);
+      // Keep the blob URL available so the user can tap "Install Contact" to open it.
+      setDownloadedVcardUrl(url);
+      // Show an install prompt instructing the user to tap to install the downloaded vCard
+      setInstallPromptOpen(true);
+
+      // Stop the saving state
       setIsSaving(false);
       return;
     }
@@ -137,18 +131,79 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
     setModalOpen(false);
   };
 
+  const handleInstallContact = () => {
+    if (!downloadedVcardUrl) {
+      // If there's no URL, just proceed to the send modal
+      setInstallPromptOpen(false);
+      setModalOpen(true);
+      return;
+    }
+
+    try {
+      // Try opening the blob URL in a new tab/window which on Android should prompt the user to open it with Contacts/Downloads.
+      window.open(downloadedVcardUrl, '_blank');
+
+      // Also create an anchor and click it with target to encourage the browser to hand off the file to the system.
+      const link = document.createElement('a');
+      link.href = downloadedVcardUrl;
+      link.target = '_blank';
+      link.rel = 'noopener';
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (e) {
+      // Ignore open errors; user can open the file manually from Downloads
+    }
+
+    // Close the install prompt and open the send modal so they can add name/email
+    setInstallPromptOpen(false);
+    setModalOpen(true);
+
+    // Revoke the blob URL after a short delay and clear state
+    setTimeout(() => {
+      try {
+        if (downloadedVcardUrl) URL.revokeObjectURL(downloadedVcardUrl);
+      } catch (e) {
+        // ignore
+      }
+      setDownloadedVcardUrl(null);
+    }, 5000);
+  };
+
   return (
     <>
       <button
         type="button"
         className={`save-button ${className}`}
-        onClick={handleSave}
+        onClick={() => setSavePromptOpen(true)}
         disabled={isSaving}
         aria-label="Save Dan Donahue's contact info"
         aria-busy={isSaving}
       >
         <span className="text-base tracking-[0.55em] text-neon">{isSaving ? 'Saving...' : 'Save Contact'}</span>
       </button>
+
+      {/* Modal to confirm saving the contact first */}
+      <ConfirmSendModal
+        open={savePromptOpen}
+        title="Save contact"
+        message={
+          "Would you like to save Dan Donahue's contact to your device? This will download a vCard you can import to your Contacts app."
+        }
+        onConfirm={() => performSave()}
+        onCancel={() => setSavePromptOpen(false)}
+      />
+
+      {/* Modal shown after download on Android to prompt the user to tap and install the contact */}
+      <ConfirmSendModal
+        open={installPromptOpen}
+        title="Contact downloaded"
+        message={
+          "The contact has been downloaded. Tap Install Contact to open it in your Contacts app and add the contact, or open your Downloads app and tap the vCard file."
+        }
+        onConfirm={handleInstallContact}
+        onCancel={() => setInstallPromptOpen(false)}
+      />
 
       {/* Modal to confirm sending the automated SMS */}
       <ConfirmSendModal
