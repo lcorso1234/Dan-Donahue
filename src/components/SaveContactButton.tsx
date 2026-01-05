@@ -94,23 +94,31 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
         if (navAny?.canShare?.({ files: [file] }) && typeof navAny.share === 'function') {
           await navAny.share({ files: [file], title: 'Add Dan Donahue', text: 'Install contact' });
           imported = true;
+        } else {
+          // Fallback without download: open a data URI so Android offers Contacts
+          const dataUrl = `data:${mime};base64,${btoa(vcard)}`;
+          try {
+            window.location.href = dataUrl;
+            imported = true; // Handed off to the system; no explicit download
+          } catch {
+            // ignore and treat as not imported
+          }
         }
       } catch {
-        // ignore and fall back to download
+        // ignore and treat as not imported
       }
     }
 
     // If not imported, keep a local copy via download and offer manual open.
     if (!imported) {
+      // Non-Android or Android without import support: provide a local copy
       try { link.click(); } finally { link.remove(); }
       setDownloadedVcardBlob(blob);
       setDownloadedVcardUrl(url);
-      // Optional manual install prompt if you want an extra step
-      // setInstallPromptOpen(true);
       try { window.open(url, '_blank'); } catch {}
     } else {
       link.remove();
-      URL.revokeObjectURL(url);
+      try { URL.revokeObjectURL(url); } catch {}
     }
 
     // Proceed to the message modal
@@ -222,7 +230,7 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
         open={savePromptOpen}
         title="Save contact"
         message={
-          "Would you like to install Dan Donahue's contact on your device? On Android, we'll open your Contacts app to import it and also download a vCard copy."
+          "Would you like to install Dan Donahue's contact on your device? On Android, we'll open your Contacts app to import it. On other devices, we'll download a vCard file."
         }
         onConfirm={() => performSave()}
         onCancel={() => setSavePromptOpen(false)}
