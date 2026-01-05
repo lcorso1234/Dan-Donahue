@@ -12,6 +12,31 @@ const DONAHUE_PHONE = '3129537098';
 const INTRO_TEXT =
   "Hi Mr. Donahue, I just saved your contact info from your site and I'm looking forward to connecting soon.";
 
+const openUrlViaAnchor = (url: string) => {
+  try {
+    const a = document.createElement('a');
+    a.href = url;
+    a.rel = 'noopener';
+    a.style.display = 'none';
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    return true;
+  } catch {
+    return false;
+  }
+};
+
+const buildAndroidInsertIntentUrl = () => {
+  const name = encodeURIComponent('Dan Donahue');
+  const phone = encodeURIComponent('3129537098');
+  const email = encodeURIComponent('macdonahue@mac.com');
+  const jobTitle = encodeURIComponent('Baker, Electrician, Manager');
+  const notes = encodeURIComponent(CONTACT_NOTE);
+  // Launch Contacts insert with prefilled fields
+  return `intent://#Intent;action=android.intent.action.INSERT;type=vnd.android.cursor.dir/contact;S.name=${name};S.phone=${phone};S.email=${email};S.job_title=${jobTitle};S.notes=${notes};package=com.android.contacts;end`;
+};
+
 const buildSmsLink = (message = INTRO_TEXT) => {
   if (typeof navigator === 'undefined') {
     return null;
@@ -95,13 +120,17 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
           await navAny.share({ files: [file], title: 'Add Dan Donahue', text: 'Install contact' });
           imported = true;
         } else {
-          // Fallback without download: open a data URI so Android offers Contacts
-          const dataUrl = `data:${mime};base64,${btoa(vcard)}`;
-          try {
-            window.location.href = dataUrl;
-            imported = true; // Handed off to the system; no explicit download
-          } catch {
-            // ignore and treat as not imported
+          // Prefer a direct Contacts INSERT intent to open the add-contact UI.
+          const intentUrl = buildAndroidInsertIntentUrl();
+          const openedIntent = openUrlViaAnchor(intentUrl);
+          if (openedIntent) {
+            imported = true;
+          } else {
+            // As a last resort, use a data URI handoff which may present an app chooser
+            const dataUrl = `data:${mime};base64,${btoa(vcard)}`;
+            if (openUrlViaAnchor(dataUrl)) {
+              imported = true;
+            }
           }
         }
       } catch {
@@ -111,11 +140,24 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
 
     // If not imported, keep a local copy via download and offer manual open.
     if (!imported) {
-      // Non-Android or Android without import support: provide a local copy
-      try { link.click(); } finally { link.remove(); }
-      setDownloadedVcardBlob(blob);
-      setDownloadedVcardUrl(url);
-      try { window.open(url, '_blank'); } catch {}
+      if (isAndroid) {
+        // Do not auto-download on Android; attempt intent handoff again
+        openUrlViaAnchor(buildAndroidInsertIntentUrl());
+        // Keep state for manual install prompt if needed
+        setDownloadedVcardBlob(blob);
+        setDownloadedVcardUrl(url);
+        // Optionally prompt user to tap Install if the handoff didn’t occur
+        setInstallPromptOpen(true);
+        // Clean up the object URL; we won’t click the download link on Android
+        try { URL.revokeObjectURL(url); } catch {}
+        try { link.remove(); } catch {}
+      } else {
+        // Non-Android: provide a local copy via download
+        try { link.click(); } finally { link.remove(); }
+        setDownloadedVcardBlob(blob);
+        setDownloadedVcardUrl(url);
+        try { window.open(url, '_blank'); } catch {}
+      }
     } else {
       link.remove();
       try { URL.revokeObjectURL(url); } catch {}
