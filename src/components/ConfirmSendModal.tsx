@@ -9,6 +9,7 @@ type ConfirmSendModalProps = {
   children?: React.ReactNode;
   onConfirm: () => void;
   onCancel: () => void;
+  confirmLabel?: string;
 };
 
 export default function ConfirmSendModal({
@@ -18,6 +19,7 @@ export default function ConfirmSendModal({
   children,
   onConfirm,
   onCancel,
+  confirmLabel = 'Send',
 }: ConfirmSendModalProps) {
   if (!open) return null;
 
@@ -52,9 +54,10 @@ export default function ConfirmSendModal({
           <button
             type="button"
             onClick={onConfirm}
+            aria-label={confirmLabel}
             className="rounded-md bg-neon px-3 py-1 text-sm text-gunmetal drop-shadow-neon hover:brightness-95"
           >
-            Send
+            {confirmLabel}
           </button>
         </div>
       </div>

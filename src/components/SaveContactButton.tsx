@@ -51,6 +51,7 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
   const [savePromptOpen, setSavePromptOpen] = useState(false);
   const [installPromptOpen, setInstallPromptOpen] = useState(false);
   const [downloadedVcardUrl, setDownloadedVcardUrl] = useState<string | null>(null);
+  const [downloadedVcardBlob, setDownloadedVcardBlob] = useState<Blob | null>(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [senderName, setSenderName] = useState('');
   const [senderEmail, setSenderEmail] = useState('');
@@ -89,21 +90,10 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
         link.remove();
       }, 100);
 
-      // Keep the blob URL available so the user can tap "Install Contact" to open it.
+      // Keep the blob and blob URL available so we can try the Web Share API (preferred) or open the file.
+      setDownloadedVcardBlob(blob);
       setDownloadedVcardUrl(url);
-      // Show an install prompt instructing the user to tap to install the downloaded vCard
-      setInstallPromptOpen(true);
 
-      // Stop the saving state
-      setIsSaving(false);
-      return;
-    }
-
-    // Non-Android: download the vCard file as before
-    const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
-    const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    link.href = url;
     link.download = 'dan-donahue.vcf';
     document.body.appendChild(link);
     link.click();
@@ -131,28 +121,60 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
     setModalOpen(false);
   };
 
-  const handleInstallContact = () => {
-    if (!downloadedVcardUrl) {
-      // If there's no URL, just proceed to the send modal
+  const handleInstallContact = async () => {
+    // If there's nothing to open/share, proceed to the send modal
+    if (!downloadedVcardUrl && !downloadedVcardBlob) {
       setInstallPromptOpen(false);
       setModalOpen(true);
       return;
     }
 
-    try {
-      // Try opening the blob URL in a new tab/window which on Android should prompt the user to open it with Contacts/Downloads.
-      window.open(downloadedVcardUrl, '_blank');
+    // Preferred: use the Web Share API with files when available (Android Chrome supports sharing files)
+    const canUseWebShareFiles =
+      typeof navigator !== 'undefined' &&
+      'canShare' in navigator &&
+      'share' in navigator &&
+      downloadedVcardBlob;
 
-      // Also create an anchor and click it with target to encourage the browser to hand off the file to the system.
-      const link = document.createElement('a');
-      link.href = downloadedVcardUrl;
-      link.target = '_blank';
-      link.rel = 'noopener';
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
-    } catch (e) {
-      // Ignore open errors; user can open the file manually from Downloads
+    if (canUseWebShareFiles) {
+      const file = new File([downloadedVcardBlob as Blob], 'dan-donahue.vcf', {
+        type: 'text/vcard',
+      });
+
+      try {
+        // Ensure the browser actually supports sharing files
+        if ((navigator as any).canShare && (navigator as any).canShare({ files: [file] })) {
+          await (navigator as any).share({
+            files: [file],
+            title: 'Add Dan Donahue',
+            text: 'Install contact',
+          });
+        } else {
+          throw new Error('Web Share with files not supported');
+        }
+      } catch (e) {
+        // Fall back to opening the blob URL below
+        try {
+          if (downloadedVcardUrl) window.open(downloadedVcardUrl, '_blank');
+        } catch (err) {
+          // ignore
+        }
+      }
+    } else if (downloadedVcardUrl) {
+      // Secondary fallback: open the blob URL in a new tab which may hand the file to Downloads/Contacts
+      try {
+        window.open(downloadedVcardUrl, '_blank');
+      } catch (e) {
+        // ignore
+      }
+
+      // Tertiary fallback: try an Android intent URL to nudge Chrome to hand off to the system
+      try {
+        const intentUrl = `intent:${downloadedVcardUrl}#Intent;action=android.intent.action.VIEW;end`;
+        window.location.href = intentUrl;
+      } catch (e) {
+        // ignore
+      }
     }
 
     // Close the install prompt and open the send modal so they can add name/email
@@ -167,6 +189,7 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
         // ignore
       }
       setDownloadedVcardUrl(null);
+      setDownloadedVcardBlob(null);
     }, 5000);
   };
 
@@ -192,6 +215,7 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
         }
         onConfirm={() => performSave()}
         onCancel={() => setSavePromptOpen(false)}
+        confirmLabel="Save"
       />
 
       {/* Modal shown after download on Android to prompt the user to tap and install the contact */}
@@ -203,6 +227,7 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
         }
         onConfirm={handleInstallContact}
         onCancel={() => setInstallPromptOpen(false)}
+        confirmLabel="Install Contact"
       />
 
       {/* Modal to confirm sending the automated SMS */}
@@ -214,6 +239,7 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
         }
         onConfirm={handleConfirmSend}
         onCancel={handleCancelSend}
+        confirmLabel="Send Message"
       >
         <div className="space-y-3">
           <input
