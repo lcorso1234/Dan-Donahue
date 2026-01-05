@@ -56,7 +56,7 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
   const [senderName, setSenderName] = useState('');
   const [senderEmail, setSenderEmail] = useState('');
 
-  const performSave = () => {
+  const performSave = async () => {
     // Close the save prompt immediately to avoid modal overlap
     setSavePromptOpen(false);
     setIsSaving(true);
@@ -67,7 +67,7 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
       'FN:Dan Donahue',
       'N:Donahue;Dan;;;',
       'TITLE:Baker, Electrician, Manager',
-      'TEL;TYPE=CELL:312.953.7098',
+      'TEL;TYPE=CELL:3129537098',
       'EMAIL:macdonahue@mac.com',
       `NOTE:${CONTACT_NOTE}`,
       'END:VCARD',
@@ -77,32 +77,43 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
     const userAgent = typeof navigator !== 'undefined' ? navigator.userAgent || '' : '';
     const isAndroid = /Android/i.test(userAgent);
 
-    if (isAndroid) {
-      // Create the vCard blob and trigger a download so the user has the file locally.
-      const blob = new Blob([vcard], { type: 'text/vcard;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = 'dan-donahue.vcf';
-      document.body.appendChild(link);
-      setTimeout(() => {
-        link.click();
-        link.remove();
-      }, 100);
-
-      // Keep the blob and blob URL available so we can try the Web Share API (preferred) or open the file.
-      setDownloadedVcardBlob(blob);
-      setDownloadedVcardUrl(url);
-
+    // Prefer to import directly via Web Share with files (Android Chrome).
+    const mime = 'text/x-vcard';
+    const blob = new Blob([vcard], { type: `${mime};charset=utf-8` });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
     link.download = 'dan-donahue.vcf';
     document.body.appendChild(link);
-    link.click();
-    link.remove();
+    // Android import first: try Web Share Level 2 with files.
+    let imported = false;
+    if (isAndroid) {
+      try {
+        const file = new File([blob], 'dan-donahue.vcf', { type: mime });
+        const navAny: any = navigator as any;
+        if (navAny?.canShare?.({ files: [file] }) && typeof navAny.share === 'function') {
+          await navAny.share({ files: [file], title: 'Add Dan Donahue', text: 'Install contact' });
+          imported = true;
+        }
+      } catch {
+        // ignore and fall back to download
+      }
+    }
 
-    // Give the browser time to initiate the download before revoking the URL.
-    setTimeout(() => URL.revokeObjectURL(url), 1500);
+    // If not imported, keep a local copy via download and offer manual open.
+    if (!imported) {
+      try { link.click(); } finally { link.remove(); }
+      setDownloadedVcardBlob(blob);
+      setDownloadedVcardUrl(url);
+      // Optional manual install prompt if you want an extra step
+      // setInstallPromptOpen(true);
+      try { window.open(url, '_blank'); } catch {}
+    } else {
+      link.remove();
+      URL.revokeObjectURL(url);
+    }
 
-    // Open our custom confirmation modal after the save starts.
+    // Proceed to the message modal
     setModalOpen(true);
     setIsSaving(false);
   };
@@ -211,11 +222,11 @@ export function SaveContactButton({ className = '' }: SaveContactButtonProps) {
         open={savePromptOpen}
         title="Save contact"
         message={
-          "Would you like to save Dan Donahue's contact to your device? This will download a vCard you can import to your Contacts app."
+          "Would you like to install Dan Donahue's contact on your device? On Android, we'll open your Contacts app to import it and also download a vCard copy."
         }
         onConfirm={() => performSave()}
         onCancel={() => setSavePromptOpen(false)}
-        confirmLabel="Save"
+        confirmLabel="Install"
       />
 
       {/* Modal shown after download on Android to prompt the user to tap and install the contact */}
