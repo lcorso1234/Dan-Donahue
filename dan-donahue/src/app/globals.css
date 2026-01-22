@@ -1,0 +1,50 @@
+@import "tailwindcss";
+
+:root {
+  /* Brand palette */
+  --background: #2a2f33; /* Gunmetal */
+  --foreground: #ffffff;
+  --card: #1f2428;
+  --neon: #39ff14; /* Neon green accent */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-gunmetal: var(--background);
+  --color-card: var(--card);
+  --color-neon: var(--neon);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+/* Consistent look in both modes for this card experience */
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #2a2f33;
+    --foreground: #ffffff;
+    --card: #1f2428;
+  }
+}
+
+/* Global background with subtle noise texture */
+body {
+  background-color: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+  background-image:
+    radial-gradient(rgba(255,255,255,0.04) 0.5px, transparent 0.5px),
+    radial-gradient(rgba(0,0,0,0.28) 0.5px, transparent 0.5px);
+  background-size: 3px 3px, 3px 3px;
+  background-position: 0 0, 1.5px 1.5px;
+}
+
+/* Jiggle micro animation for the CTA */
+@keyframes jiggle {
+  0%, 100% { transform: rotate(-0.6deg) translateY(0); }
+  50% { transform: rotate(0.6deg) translateY(-1px); }
+}
+
+.animate-jiggle {
+  animation: jiggle 1.2s ease-in-out infinite;
+}
